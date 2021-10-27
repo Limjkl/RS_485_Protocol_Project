@@ -45,8 +45,8 @@ void initUart0()
     SYSCTL_GPIOHBCTL_R = 0;
 
     // Enable clocks
-    SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R0;
-    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0;
+    SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R0|SYSCTL_RCGCUART_R1;
+    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0|SYSCTL_RCGCGPIO_R1;
     _delay_cycles(3);
 
     // Configure UART0 pins
@@ -86,14 +86,20 @@ void initUart1()
     GPIO_PORTB_PCTL_R |= GPIO_PCTL_PB1_U1TX | GPIO_PCTL_PB0_U1RX;
                                                         // select UART1 to drive pins PB0 and PB1: default, added for clarity
 
-    // Configure UART0 to 115200 baud, 8N1 format
+    // Configure UART0 to 38400 baud, 8bit sticky parity 1 stop bit format
     UART1_CTL_R = 0;                                    // turn-off UART1 to allow safe programming
     UART1_CC_R = UART_CC_CS_SYSCLK;                     // use system clock (40 MHz)
-    UART1_IBRD_R = 65;                                  // r = 40 MHz / (Nx115.2kHz), set floor(r)=21, where N=16
-    UART1_FBRD_R = 7;                                  // round(fract(r)*64)=45
-    UART1_LCRH_R = UART_LCRH_WLEN_8 | UART_LCRH_FEN;    // configure for 8N1 w/ 16-level FIFO
+    UART1_IBRD_R = 65;                                  // r = 40 MHz / (Nx38400Hz), set floor(r)=65, where N=16
+    UART1_FBRD_R = 7;                                  // round(fract(r)*64)=7
+    UART1_LCRH_R = UART_LCRH_WLEN_8 | UART_LCRH_PEN | UART_LCRH_SPS; // configure for 8bit, sticky parity, 1 stop bit
+    UART1_LCRH_R &= ~UART_LCRH_FEN ;                    // disable FIFO
     UART1_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN;
                                                         // enable TX, RX, and module
+
+    //enable interrupt for uart1
+    UART1_IM_R = UART_IM_TXIM  ;//transmit interrupt is enabled
+    UART1_ICR_R = UART_ICR_TXIC           ;// clear TX interrupt
+
 
 
 
