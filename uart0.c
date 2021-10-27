@@ -72,6 +72,33 @@ void initUart0()
 
 }
 
+// Initialize UART1
+void initUart1()
+{
+
+    // Configure UART0 pins
+    GPIO_PORTB_DIR_R |= UART_TX_MASK;                   // enable output on UART1 TX pin
+    GPIO_PORTB_DIR_R &= ~UART_RX_MASK;                   // enable input on UART1 RX pin
+    GPIO_PORTB_DR2R_R |= UART_TX_MASK;                  // set drive strength to 2mA (not needed since default configuration -- for clarity)
+    GPIO_PORTB_DEN_R |= UART_TX_MASK | UART_RX_MASK;    // enable digital on UART1 pins
+    GPIO_PORTB_AFSEL_R |= UART_TX_MASK | UART_RX_MASK;  // use peripheral to drive PB0, PB1
+    GPIO_PORTB_PCTL_R &= ~(GPIO_PCTL_PB1_M | GPIO_PCTL_PB0_M); // clear bits 0-7
+    GPIO_PORTB_PCTL_R |= GPIO_PCTL_PB1_U1TX | GPIO_PCTL_PB0_U1RX;
+                                                        // select UART1 to drive pins PB0 and PB1: default, added for clarity
+
+    // Configure UART0 to 115200 baud, 8N1 format
+    UART1_CTL_R = 0;                                    // turn-off UART1 to allow safe programming
+    UART1_CC_R = UART_CC_CS_SYSCLK;                     // use system clock (40 MHz)
+    UART1_IBRD_R = 65;                                  // r = 40 MHz / (Nx115.2kHz), set floor(r)=21, where N=16
+    UART1_FBRD_R = 7;                                  // round(fract(r)*64)=45
+    UART1_LCRH_R = UART_LCRH_WLEN_8 | UART_LCRH_FEN;    // configure for 8N1 w/ 16-level FIFO
+    UART1_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN;
+                                                        // enable TX, RX, and module
+
+
+
+}
+
 // Set baud rate as function of instruction cycle frequency
 void setUart0BaudRate(uint32_t baudRate, uint32_t fcyc)
 {
