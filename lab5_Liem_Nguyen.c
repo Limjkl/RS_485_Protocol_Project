@@ -25,19 +25,16 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-//#include <string.h>
 #include "clock.h"
 #include "uart0.h"
 #include "tm4c123gh6pm.h"
 
 // Bitband aliases
-#define RED_LED      (*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 1*4)))
-#define GREEN_LED    (*((volatile uint32_t *)(0x42000000 + (0x400253FC-0x40000000)*32 + 3*4)))
+#define DE      (*((volatile uint32_t *)(0x42000000 + (0x400053FC-0x40000000)*32 + 5*4))) //PB5, RS_485 IC enable pin
 
-// PortF masks
-#define GREEN_LED_MASK 8
-#define RED_LED_MASK 2
-#define NULL 0
+// Port masks
+#define DE_MASK 32
+
 //define
 
 #define MAX_CHARS 80
@@ -49,6 +46,7 @@ uint8_t fieldPosition[MAX_FIELDS];
 char fieldType[MAX_FIELDS];
 } USER_DATA;
 
+#define NULL 0
 //-----------------------------------------------------------------------------
 // Subroutines
 //-----------------------------------------------------------------------------
@@ -191,13 +189,13 @@ void initHw()
     initSystemClockTo40Mhz();
 
     // Enable clocks
-    SYSCTL_RCGCGPIO_R = SYSCTL_RCGCGPIO_R5;
+    SYSCTL_RCGCGPIO_R = SYSCTL_RCGCGPIO_R1;
     _delay_cycles(3);
 
     // Configure LED pins
-    GPIO_PORTF_DIR_R |= GREEN_LED_MASK | RED_LED_MASK;  // bits 1 and 3 are outputs
-    GPIO_PORTF_DR2R_R |= GREEN_LED_MASK | RED_LED_MASK; // set drive strength to 2mA (not needed since default configuration -- for clarity)
-    GPIO_PORTF_DEN_R |= GREEN_LED_MASK | RED_LED_MASK;  // enable LEDs
+    GPIO_PORTB_DIR_R |= DE_MASK;  // bits 1 and 3 are outputs
+    GPIO_PORTB_DR2R_R |= DE_MASK ; // set drive strength to 2mA (not needed since default configuration -- for clarity)
+    GPIO_PORTB_DEN_R |= DE_MASK ;  // enable DE pin
 }
 
 //-----------------------------------------------------------------------------
