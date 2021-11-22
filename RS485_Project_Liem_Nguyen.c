@@ -43,7 +43,7 @@
 #define RX_LED_MASK 32
 #define TX_LED_MASK 64
 
-//variables define
+//Global variables define
 
 #define NULL 0
 #define MAX_CHARS 80
@@ -77,7 +77,7 @@ char* getFieldString(USER_DATA* data, uint8_t fieldNumber);
 int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber);
 bool isCommand(USER_DATA* data, const char strCommand[],uint8_t minArguments);
 void initHw();
-
+bool strcmp(char* str,const char strCommand[]);
 //-----------------------------------------------------------------------------
 // Main
 //-----------------------------------------------------------------------------
@@ -115,37 +115,102 @@ int main(void)
       }
     #endif
       // Command evaluation
-      // set add, data as add and data are integers
-      if ( isCommand( &data, "set", 2))
+      // Reset command function
+      if ( isCommand( &data, "Reset", 0))
       {
-      int32_t add = getFieldInteger(&data, 1);
-      int32_t data1 = getFieldInteger(&data, 2);
-      valid = true;
-      // do something with this information
+          //write key to the register field in order to change the bits in this register
+          // request a reset for the core and all on-chip peripherals except the debug interface
+          NVIC_APINT_R  |= NVIC_APINT_VECTKEY|NVIC_APINT_SYSRESETREQ |NVIC_APINT_VECT_RESET;
+          valid = true;
       }
-      // alert ONOFF   alert ON or alert OFF are the expected commands
-      if ( isCommand(&data, "alert", 1))
+      // CS command base on ON or OFF set/clear a global bit
+      if ( isCommand(&data, "cs", 1))
+            {
+            char* str = getFieldString(&data, 1);
+           if( strcmp(str, "ON"))
+            {
+                valid = true;// global bit is set here
+            }
+           else if (strcmp(str, "OFF"))
+           {
+               valid = false;// global bit is cleared here
+           }
+            }
+      //random command ON/OFF set/clear a global bit
+      if ( isCommand(&data, "random", 1))
       {
-      char* str = getFieldString(&data, 1);
-      putsUart0(str);
-      putcUart0('\r');
-      putcUart0('\n');
-      valid = true;
-      // process the string with your custom strcmp instruction, then do something
+          char* str = getFieldString(&data, 1);
+          if( strcmp(str, "ON"))
+          {
+              valid = true;// global bit is set here
+          }
+          else if (strcmp(str, "OFF"))
+          {
+              valid = false;// global bit is cleared here
+          }
       }
-      // Process other commands here
+      // set command
+      if ( isCommand( &data, "set", 3))
+           {
+           int32_t add = getFieldInteger(&data, 1);
+           int32_t channel = getFieldInteger(&data, 2);
+           int32_t value = getFieldInteger(&data, 3);
+           valid = true;
+           // do something with this information with sendRS485
+           }
+      //get command
+      if ( isCommand( &data, "get", 2))
+      {
+          int32_t add = getFieldInteger(&data, 1);
+          int32_t channel = getFieldInteger(&data, 2);
+
+          valid = true;
+          // do something with this information with sendRS485
+      }
+      //poll command
+      if ( isCommand( &data, "poll", 0))
+      {
+          //send a poll request?
+          valid = true;
+          // do something with this information with sendRS485
+      }
+      //sa command
+      if ( isCommand( &data, "sa", 2))
+      {
+          int32_t add = getFieldInteger(&data, 1);
+          int32_t newadd = getFieldInteger(&data, 2);
+
+          valid = true;
+          // do something with this information with sendRS485
+      }
+      //square command
+      if ( isCommand( &data, "square", 5))
+      {
+          int32_t Value1 = getFieldInteger(&data, 1);
+          int32_t Value2 = getFieldInteger(&data, 2);
+          int32_t Time1 = getFieldInteger(&data, 3);
+          int32_t Time2 = getFieldInteger(&data, 4);
+          int32_t Cycles = getFieldInteger(&data, 5);
+          valid = true;
+          // do something with this information with sendRS485
+      }
+      //pulse command
+      if ( isCommand( &data, "pulse", 2))
+      {
+          int32_t Value1 = getFieldInteger(&data, 1);
+          int32_t Duration = getFieldInteger(&data, 2);
+          valid = true;
+          // do something with this information with sendRS485
+      }
       // Look for error
       if (!valid)
       {
        putsUart0("Invalid command\r\n");
       }
+
+
+
       }
-      if ( isCommand( &data, "Reset", 0))
-        {
-
-        }
-
-
 }
 
 //-----------------------------------------------------------------------------
@@ -176,6 +241,19 @@ void initHw()
     GPIO_PORTE_DEN_R |= RX_LED_MASK ;  // enable Green LED pin
 }
 
+bool strcmp(char* str,const char strCommand[])
+{
+    int i=0;
+    while(strCommand[i]!=NULL)
+    {
+        if(strCommand[i]-str[i]!=0)
+        {
+            return 0;
+        }
+        i++;
+    }
+    return 1;
+}
 
 bool isCommand(USER_DATA* data, const char strCommand[],uint8_t minArguments)
 {
@@ -201,7 +279,7 @@ int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber)
 {
     int number=0;
     int offset=0;
-    if (fieldNumber <= data->fieldCount & data->fieldType[fieldNumber] == 'n' )
+    if (fieldNumber <= data->fieldCount && data->fieldType[fieldNumber] == 'n' )
         {
         offset = data->fieldPosition[fieldNumber];
         while (data->buffer[offset] != 0)
@@ -216,11 +294,12 @@ int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber)
 
 char* getFieldString(USER_DATA* data, uint8_t fieldNumber)
 {
+
     if (fieldNumber <= data->fieldCount & data->fieldType[fieldNumber] == 'a' )
-    {
-      return &data->buffer[data->fieldPosition[fieldNumber]];
-    }
-    else return NULL;
+      {
+        return &data->buffer[data->fieldPosition[fieldNumber]];
+      }
+      else return NULL;
 }
 
 void parseFields(USER_DATA* data)
@@ -236,9 +315,9 @@ void parseFields(USER_DATA* data)
                    i=MAX_CHARS;
                    return;
                }
-        if(data->buffer[i]>=48 & data->buffer[i]<=57 | data->buffer[i]==45 | data->buffer[i]==46)
+        if(data->buffer[i]>=48 && data->buffer[i]<=57 || data->buffer[i]==45 || data->buffer[i]==46)
         {
-                   if(state!=1 & state!=2)
+                   if(state!=1 && state!=2)
                    { data->fieldType[offset]='n';
                      data->fieldPosition[offset]=i;
                      data->fieldCount++;
@@ -247,7 +326,7 @@ void parseFields(USER_DATA* data)
                    }
                    else {goto cont;}
         }
-        else if (data->buffer[i] >= 65 & data->buffer[i] <=90  )
+        else if (data->buffer[i] >= 65 && data->buffer[i] <=90  )
         {
                    if(state!=2 & state!=1)
                    { data->fieldType[offset]='a';
@@ -258,9 +337,9 @@ void parseFields(USER_DATA* data)
                    }
                    else {goto cont;}
               }
-        else if(data->buffer[i]>=97  & data->buffer[i]<=122 )
+        else if(data->buffer[i]>=97  && data->buffer[i]<=122 )
               {
-            if(state!=2 & state!=1)
+            if(state!=2 && state!=1)
             { data->fieldType[offset]='a';
               data->fieldPosition[offset]=i;
               data->fieldCount++;
@@ -294,7 +373,7 @@ void getsUart0(USER_DATA* data)
         i=1;
         return;
     }
-    else if (n == 8 | n == 127 & count > 0)
+    else if (n == 8 || n == 127 && count > 0)
     {
         count--;
     }

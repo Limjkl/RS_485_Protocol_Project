@@ -69,14 +69,13 @@ void initUart0()
                                                         // enable TX, RX, and module
 
 
-
 }
 
 // Initialize UART1
 void initUart1()
 {
 
-    // Configure UART0 pins
+  /* // Configure UART0 pins
     GPIO_PORTB_DIR_R |= UART_TX_MASK;                   // enable output on UART1 TX pin
     GPIO_PORTB_DIR_R &= ~UART_RX_MASK;                   // enable input on UART1 RX pin
     GPIO_PORTB_DR2R_R |= UART_TX_MASK;                  // set drive strength to 2mA (not needed since default configuration -- for clarity)
@@ -98,7 +97,8 @@ void initUart1()
 
     //enable interrupt for uart1
     UART1_IM_R = UART_IM_TXIM  ;//transmit interrupt is enabled
-    UART1_ICR_R = UART_ICR_TXIC           ;// clear TX interrupt
+    UART1_ICR_R = UART_ICR_TXIC           ;// clear TX interrupt*/
+
 
 
 
