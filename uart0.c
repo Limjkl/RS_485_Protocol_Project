@@ -75,7 +75,7 @@ void initUart0()
 void initUart1()
 {
 
-  /* // Configure UART0 pins
+   // Configure UART1 pins
     GPIO_PORTB_DIR_R |= UART_TX_MASK;                   // enable output on UART1 TX pin
     GPIO_PORTB_DIR_R &= ~UART_RX_MASK;                   // enable input on UART1 RX pin
     GPIO_PORTB_DR2R_R |= UART_TX_MASK;                  // set drive strength to 2mA (not needed since default configuration -- for clarity)
@@ -90,14 +90,14 @@ void initUart1()
     UART1_CC_R = UART_CC_CS_SYSCLK;                     // use system clock (40 MHz)
     UART1_IBRD_R = 65;                                  // r = 40 MHz / (Nx38400Hz), set floor(r)=65, where N=16
     UART1_FBRD_R = 7;                                  // round(fract(r)*64)=7
-    UART1_LCRH_R = UART_LCRH_WLEN_8 | UART_LCRH_PEN | UART_LCRH_SPS; // configure for 8bit, sticky parity, 1 stop bit
+    UART1_LCRH_R = UART_LCRH_WLEN_8 | UART_LCRH_PEN | UART_LCRH_SPS|UART_LCRH_EPS ; // configure for 8bit, sticky parity, 1 stop bit
     UART1_LCRH_R &= ~UART_LCRH_FEN ;                    // disable FIFO
     UART1_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN;
                                                         // enable TX, RX, and module
 
     //enable interrupt for uart1
     UART1_IM_R = UART_IM_TXIM  ;//transmit interrupt is enabled
-    UART1_ICR_R = UART_ICR_TXIC           ;// clear TX interrupt*/
+    UART1_ICR_R = UART_ICR_TXIC           ;// clear TX interrupt
 
 
 

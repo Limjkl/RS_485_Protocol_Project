@@ -1,1 +1,1 @@
-"./clock.obj" "./lab5_Liem_Nguyen.obj" "./tm4c123gh6pm_startup_ccs.obj" "./uart0.obj" "../tm4c123gh6pm.cmd" -llibc.a 
+"./RS485_Project_Liem_Nguyen.obj" "./clock.obj" "./tm4c123gh6pm_startup_ccs.obj" "./uart0.obj" "../tm4c123gh6pm.cmd" -llibc.a 

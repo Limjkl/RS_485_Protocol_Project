@@ -9,38 +9,38 @@ CMD_SRCS += \
 ../tm4c123gh6pm.cmd 
 
 C_SRCS += \
+../RS485_Project_Liem_Nguyen.c \
 ../clock.c \
-../lab5_Liem_Nguyen.c \
 ../tm4c123gh6pm_startup_ccs.c \
 ../uart0.c 
 
 C_DEPS += \
+./RS485_Project_Liem_Nguyen.d \
 ./clock.d \
-./lab5_Liem_Nguyen.d \
 ./tm4c123gh6pm_startup_ccs.d \
 ./uart0.d 
 
 OBJS += \
+./RS485_Project_Liem_Nguyen.obj \
 ./clock.obj \
-./lab5_Liem_Nguyen.obj \
 ./tm4c123gh6pm_startup_ccs.obj \
 ./uart0.obj 
 
 OBJS__QUOTED += \
+"RS485_Project_Liem_Nguyen.obj" \
 "clock.obj" \
-"lab5_Liem_Nguyen.obj" \
 "tm4c123gh6pm_startup_ccs.obj" \
 "uart0.obj" 
 
 C_DEPS__QUOTED += \
+"RS485_Project_Liem_Nguyen.d" \
 "clock.d" \
-"lab5_Liem_Nguyen.d" \
 "tm4c123gh6pm_startup_ccs.d" \
 "uart0.d" 
 
 C_SRCS__QUOTED += \
+"../RS485_Project_Liem_Nguyen.c" \
 "../clock.c" \
-"../lab5_Liem_Nguyen.c" \
 "../tm4c123gh6pm_startup_ccs.c" \
 "../uart0.c" 
 

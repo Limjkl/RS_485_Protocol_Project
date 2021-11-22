@@ -10,8 +10,8 @@ GEN_OPTS__FLAG :=
 GEN_CMDS__FLAG := 
 
 ORDERED_OBJS += \
+"./RS485_Project_Liem_Nguyen.obj" \
 "./clock.obj" \
-"./lab5_Liem_Nguyen.obj" \
 "./tm4c123gh6pm_startup_ccs.obj" \
 "./uart0.obj" \
 "../tm4c123gh6pm.cmd" \
@@ -157,8 +157,8 @@ RS485_Protocol_Project.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "clock.obj" "lab5_Liem_Nguyen.obj" "tm4c123gh6pm_startup_ccs.obj" "uart0.obj" 
-	-$(RM) "clock.d" "lab5_Liem_Nguyen.d" "tm4c123gh6pm_startup_ccs.d" "uart0.d" 
+	-$(RM) "RS485_Project_Liem_Nguyen.obj" "clock.obj" "tm4c123gh6pm_startup_ccs.obj" "uart0.obj" 
+	-$(RM) "RS485_Project_Liem_Nguyen.d" "clock.d" "tm4c123gh6pm_startup_ccs.d" "uart0.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

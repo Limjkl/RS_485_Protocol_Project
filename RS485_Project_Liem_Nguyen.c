@@ -48,6 +48,7 @@
 #define NULL 0
 #define MAX_CHARS 80
 #define MAX_FIELDS 5
+#define MY_ADD 1
 
 typedef struct _USER_DATA
 { char buffer[MAX_CHARS+1];
@@ -58,14 +59,23 @@ char fieldType[MAX_FIELDS];
 
 typedef struct _TX485_MSG
 { uint8_t DST_ADDRESS;
+uint8_t SRC_ADDRESS;
 char COMMAND;
 uint8_t CHANNEL;
-uint8_t SIZE;
-char data[MAX_CHARS];
+uint8_t SIZE ;
+char data[8];
 uint8_t SEQ_ID;
 uint8_t CHECKSUM;
 bool VALID;
 } TX485_MSG;
+
+
+bool ack =1;
+bool MSGinProgress= -1;
+uint8_t MSG_phase=0;
+uint8_t RX_phase=0;
+
+char RX_ARRAY[MAX_CHARS];
 
 //-----------------------------------------------------------------------------
 // Prototype Functions Call
@@ -77,7 +87,12 @@ char* getFieldString(USER_DATA* data, uint8_t fieldNumber);
 int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber);
 bool isCommand(USER_DATA* data, const char strCommand[],uint8_t minArguments);
 void initHw();
+void sendRS485(TX485_MSG* MSG);
+void sendRS485Byte();
+bool checksumcheck(void);
 bool strcmp(char* str,const char strCommand[]);
+void processdata(TX485_MSG* MSG, char str[]);
+void sendack(TX485_MSG* MSG);
 //-----------------------------------------------------------------------------
 // Main
 //-----------------------------------------------------------------------------
@@ -86,6 +101,9 @@ int main(void)
 {
     // Initialize hardware
     USER_DATA data;
+    TX485_MSG MSG;
+    MSG.VALID=-1;
+    MSG.SIZE=1;
     initHw();
     initUart0();
     initUart1();
@@ -195,13 +213,21 @@ int main(void)
           // do something with this information with sendRS485
       }
       //pulse command
-      if ( isCommand( &data, "pulse", 2))
+      if ( isCommand( &data, "pulse", 3))
       {
-          int32_t Value1 = getFieldInteger(&data, 1);
-          int32_t Duration = getFieldInteger(&data, 2);
+          int32_t Value = getFieldInteger(&data, 1);
+          int32_t Duration1 = getFieldInteger(&data, 2);
+          int32_t Duration2 = getFieldInteger(&data, 3);
+          MSG.SIZE=3;
+          MSG.COMMAND=0x02;
+          MSG.data[0]=Value;
+          MSG.data[1]=Duration1;
+          MSG.data[2]=Duration2;
+          MSG.VALID=1;
           valid = true;
-          // do something with this information with sendRS485
+          sendRS485 (&MSG);
       }
+
       // Look for error
       if (!valid)
       {
@@ -295,7 +321,7 @@ int32_t getFieldInteger(USER_DATA* data, uint8_t fieldNumber)
 char* getFieldString(USER_DATA* data, uint8_t fieldNumber)
 {
 
-    if (fieldNumber <= data->fieldCount & data->fieldType[fieldNumber] == 'a' )
+      if (fieldNumber <= data->fieldCount & data->fieldType[fieldNumber] == 'a' )
       {
         return &data->buffer[data->fieldPosition[fieldNumber]];
       }
@@ -389,5 +415,176 @@ void getsUart0(USER_DATA* data)
         count++;
     }
 
+    }
+}
+void UART1ISR(TX485_MSG* MSG)
+{
+    if(UART1_FR_R && UART_FR_TXFE)
+    {
+        sendRS485Byte(&MSG);
+        UART1_ICR_R = UART_ICR_TXIC;
+    }
+    if(UART1_FR_R && UART_FR_RXFF)
+    {
+        if(RX_phase==0 && UART_RSR_PE&UART1_RSR_R && UART1_DR_R==MY_ADD)//checking again if the Parity checking is correct
+        {
+           RX_ARRAY[0]=UART1_DR_R;
+           RX_phase++;
+        }
+        else if(RX_phase>0)
+        {
+            if(RX_ARRAY[2]!= NULL && RX_ARRAY[2]==UART1_DR_R && RX_phase==2)
+            {
+                RX_phase=0;
+                goto end;
+            }
+            RX_ARRAY[RX_phase]=UART1_DR_R;
+            RX_phase++;
+        }
+        else if (checksumcheck())
+        {
+            if (RX_ARRAY[3]&0x80)//require an ack to be sent back
+               {
+                    ack=-1;
+                    MSG->DST_ADDRESS=RX_ARRAY[1];
+                    MSG->COMMAND=0x70;
+                    MSG->SIZE=1;
+                    MSG->CHANNEL=0;
+                    MSG->data[0]=RX_ARRAY[2];
+                    MSG->VALID=1;
+                    sendRS485 (&MSG);
+               }
+           // processdata( &MSG , RX_ARRAY);
+        }
+       end: UART1_ICR_R = UART_ICR_RXIC;
+    }
+}
+
+/*void processdata(TX485_MSG* MSG, char str[])
+{
+   if (str[3]&0x80)//require an ack to be sent back
+   {
+       sendack(&MSG);
+   }
+}
+void sendack(TX485_MSG* MSG)
+{
+    ack=-1;
+    MSG->DST_ADDRESS=RX_ARRAY[1];
+    MSG->COMMAND=0x70;
+    MSG->SIZE=1;
+    MSG->CHANNEL=0;
+    MSG->data[0]=RX_ARRAY[2];
+    MSG->VALID=1;
+    sendRS485(&MSG);
+}*/
+bool checksumcheck(void)
+{
+    int checksum=0;
+    int counter;
+    if (RX_ARRAY[5]!=NULL && RX_phase==RX_ARRAY[5]+6)
+    {
+        for (counter=0;counter<RX_phase-1;counter++)
+        {
+            checksum+=RX_ARRAY[counter];
+        }
+        if(checksum==RX_ARRAY[RX_phase-1])
+        {
+            return true;
+        }
+        else return false;
+    }
+    else
+        return false;
+}
+void sendRS485 (TX485_MSG* MSG)
+{
+    while(!MSG->VALID)
+    {
+        int i;
+        if (ack)
+        {
+            MSG->COMMAND |= 0x80;
+        }
+        MSG->SRC_ADDRESS=MY_ADD;
+        MSG->SEQ_ID++;
+        MSG->CHECKSUM=MSG->CHANNEL + MSG->COMMAND + MSG->DST_ADDRESS + MSG->SEQ_ID + MSG->SRC_ADDRESS + MSG->SIZE ;
+        for (i = 0; i<= MSG->SIZE;i++)
+        {
+        MSG->CHECKSUM += MSG->data[i];
+        }
+        if(MSG->SEQ_ID==256) MSG->SEQ_ID=0;
+    }
+    if(UART1_FR_R && UART_FR_TXFE)
+    {
+        sendRS485Byte(&MSG);
+    }
+
+}
+void sendRS485Byte(TX485_MSG* MSG)
+{
+
+    if(!MSGinProgress)
+          {
+              MSG_phase=0;
+              MSGinProgress=1;
+          }
+    if(MSGinProgress)
+    {
+
+        DE=1;   //IC enable
+        switch (MSG_phase)
+    {
+        case 0:
+            UART1_CTL_R = 0;
+            UART1_LCRH_R &= ~UART_LCRH_EPS ;
+            UART1_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN;
+            UART1_DR_R = MSG->DST_ADDRESS ;
+            MSG_phase++;
+            break;
+        case 1:
+            UART1_CTL_R = 0;
+            UART1_LCRH_R|=UART_LCRH_EPS ;
+            UART1_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN;
+            UART1_DR_R = MSG->SRC_ADDRESS;
+            MSG_phase++;
+            break;
+        case 2:
+            UART1_DR_R =MSG->SEQ_ID;
+            MSG_phase++;
+            break;
+        case 3:
+            UART1_DR_R = MSG->COMMAND;
+            MSG_phase++;
+            break;
+        case 4:
+            UART1_DR_R =MSG->CHANNEL;
+            MSG_phase++;
+            break;
+        case 5:
+            UART1_DR_R =MSG->SIZE;
+            MSG_phase++;
+            break;
+        default:
+            if(MSG_phase<=6+MSG->SIZE && MSG_phase>5)
+            {
+                UART1_DR_R =MSG->data[MSG_phase-6];
+                MSG_phase++;
+                break;
+            }
+            else if(MSG_phase>6+MSG->SIZE && MSG_phase<8+MSG->SIZE)
+            {
+                UART1_DR_R=MSG->CHECKSUM;
+                MSG_phase++;
+                break;
+            }
+            else
+            {
+                MSGinProgress=-1;
+                MSG->VALID=-1;
+                DE=0;
+                break;
+            }
+    }
     }
 }
