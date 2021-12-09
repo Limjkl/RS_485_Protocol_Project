@@ -1,19 +1,21 @@
-// UART0 Library
-// Jason Losh
-
+//Liem Nguyen
+// liem.nguyen3@mavs.uta.edu
 //-----------------------------------------------------------------------------
 // Hardware Target
 //-----------------------------------------------------------------------------
 
 // Target Platform: EK-TM4C123GXL
 // Target uC:       TM4C123GH6PM
-// System Clock:    -
+// System Clock:    40MHz
 
 // Hardware configuration:
 // UART Interface:
 //   U0TX (PA1) and U0RX (PA0) are connected to the 2nd controller
 //   The USB on the 2nd controller enumerates to an ICDI interface and a virtual COM port
-
+// UART1 RS485 Interface:
+//   U1TX (PB1) and U1RX (PB0) are connected to the RS-485 Transceiver
+//   The  RS-485 Transceiver is connected to a common bus which multiple nodes can communicate with each others
+//   Configured to 38,400 baud, 8S1
 //-----------------------------------------------------------------------------
 // Device includes, defines, and assembler directives
 //-----------------------------------------------------------------------------
@@ -30,6 +32,7 @@
 //-----------------------------------------------------------------------------
 // Global variables
 //-----------------------------------------------------------------------------
+#define MY_ADD 0x01
 
 //-----------------------------------------------------------------------------
 // Subroutines
@@ -64,9 +67,12 @@ void initUart0()
     UART0_CC_R = UART_CC_CS_SYSCLK;                     // use system clock (40 MHz)
     UART0_IBRD_R = 21;                                  // r = 40 MHz / (Nx115.2kHz), set floor(r)=21, where N=16
     UART0_FBRD_R = 45;                                  // round(fract(r)*64)=45
-    UART0_LCRH_R = UART_LCRH_WLEN_8 | UART_LCRH_FEN;    // configure for 8N1 w/ 16-level FIFO
-    UART0_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN;
+    UART0_LCRH_R = UART_LCRH_WLEN_8;// | UART_LCRH_FEN;    // configure for 8N1 w/ 16-level FIFO
+    UART0_IM_R = UART_IM_TXIM;
+    UART0_ICR_R = UART_ICR_TXIC;
+    UART0_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN|UART_CTL_EOT;
                                                         // enable TX, RX, and module
+    NVIC_EN0_R |= 1 << (INT_UART0-16);
 
 
 }
@@ -75,7 +81,7 @@ void initUart0()
 void initUart1()
 {
 
-  /* // Configure UART0 pins
+   // Configure UART1 pins
     GPIO_PORTB_DIR_R |= UART_TX_MASK;                   // enable output on UART1 TX pin
     GPIO_PORTB_DIR_R &= ~UART_RX_MASK;                   // enable input on UART1 RX pin
     GPIO_PORTB_DR2R_R |= UART_TX_MASK;                  // set drive strength to 2mA (not needed since default configuration -- for clarity)
@@ -90,14 +96,17 @@ void initUart1()
     UART1_CC_R = UART_CC_CS_SYSCLK;                     // use system clock (40 MHz)
     UART1_IBRD_R = 65;                                  // r = 40 MHz / (Nx38400Hz), set floor(r)=65, where N=16
     UART1_FBRD_R = 7;                                  // round(fract(r)*64)=7
-    UART1_LCRH_R = UART_LCRH_WLEN_8 | UART_LCRH_PEN | UART_LCRH_SPS; // configure for 8bit, sticky parity, 1 stop bit
+    UART1_LCRH_R = UART_LCRH_WLEN_8 | UART_LCRH_PEN | UART_LCRH_SPS|UART_LCRH_EPS ; // configure for 8bit, sticky parity, 1 stop bit
     UART1_LCRH_R &= ~UART_LCRH_FEN ;                    // disable FIFO
-    UART1_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN;
-                                                        // enable TX, RX, and module
 
+ //   UART1_9BITADDR_R=UART_9BITADDR_9BITEN;
+   // UART1_9BITADDR_R=MY_ADD;
     //enable interrupt for uart1
-    UART1_IM_R = UART_IM_TXIM  ;//transmit interrupt is enabled
-    UART1_ICR_R = UART_ICR_TXIC           ;// clear TX interrupt*/
+    UART1_IM_R = UART_IM_TXIM | UART_IM_RXIM  ;//transmit interrupt is enabled
+    UART1_ICR_R = UART_ICR_TXIC|UART_ICR_RXIC;           // clear TX interrupt
+    UART1_CTL_R = UART_CTL_TXE | UART_CTL_RXE | UART_CTL_UARTEN|UART_CTL_EOT;//|UART_CTL_LBE;// enable TX, RX, and module
+    //turn on LBE (loop back) for debugging
+    NVIC_EN0_R |= 1 << (INT_UART1-16);
 
 
 
